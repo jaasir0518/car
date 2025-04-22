@@ -3,7 +3,19 @@ import Link from 'next/link';
 import { Calendar, MapPin, Users, Gauge } from 'lucide-react';
 import { useAuth } from '@clerk/nextjs';
 
-const CarCard = ({ car }) => {
+interface car {
+  id: string;
+  name: string;
+  image: string;
+  price: number;
+  location: string;
+  passengers: number;
+  mileage: number;
+  transmission: string;
+  year: number;
+}
+
+const CarCard = ({ car }: { car : any }) => {
   const { isSignedIn } = useAuth();
   
   const {

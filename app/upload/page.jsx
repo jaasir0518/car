@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import UploadCarForm from '@/components/cars/UploadCarForm';
-import { Button } from '@/components/ui/button';  // Changed from 'button' to 'Button'
+import Button from '@/components/ui/Button';
 import Loader from '@/components/ui/Loader';
 import { useAuth } from '@/context/AuthContext';
 
@@ -28,7 +28,7 @@ export default function UploadPage() {
       <div className="container mx-auto px-4 py-16 text-center">
         <h1 className="text-3xl font-bold mb-6">Please Sign In</h1>
         <p className="mb-8">You need to be signed in to upload a car for rental.</p>
-        <Button onClick={() => router.push('/auth/signin')}>
+        <Button onClick={() => router.push('/auth/signin/[[...index]]')}>
           Sign In
         </Button>
       </div>
