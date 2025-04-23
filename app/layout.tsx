@@ -2,9 +2,9 @@
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/context/AuthContext';
 import { Inter } from 'next/font/google';
-import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import './globals.css';
+import { ReactNode } from 'react';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -13,8 +13,6 @@ export const metadata = {
   description: 'Find and rent your ideal car',
 };
 
-import { ReactNode } from 'react';
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <ClerkProvider>
@@ -22,7 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <body className={inter.className}>
           <AuthProvider>
             <div className="min-h-screen flex flex-col">
-              <Header />
+              {/* Header removed from here */}
               <main className="flex-grow">
                 {children}
               </main>

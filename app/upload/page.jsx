@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import UploadCarForm from '@/components/cars/UploadCarForm';
-import Button from '@/components/ui/Button';
-import Loader from '@/components/ui/Loader';
+import { Button }from '@/components/ui/button';
+import { Loader } from '@/components/ui/Loader';
 import { useAuth } from '@/context/AuthContext';
 
 export default function UploadPage() {

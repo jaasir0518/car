@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/ui/Loader';
 
+
 export default function LocationsPage() {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
