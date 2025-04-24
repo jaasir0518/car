@@ -1,152 +1,116 @@
-import { useState } from 'react';
-import { Calendar, MapPin, Filter, Check } from 'lucide-react';
+// components/cars/SearchFilters.jsx
+import React from 'react';
 
-const SearchFilters = ({ onFilter }) => {
-  const [location, setLocation] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [priceRange, setPriceRange] = useState([0, 500]);
-  const [vehicleType, setVehicleType] = useState('all');
-  const [transmission, setTransmission] = useState('all');
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+const CATEGORIES = [
+  'Economy', 'Compact', 'Midsize', 'SUV', 'Luxury', 'Van', 'Convertible'
+];
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onFilter({
-      location,
-      startDate,
-      endDate,
-      priceRange,
-      vehicleType,
-      transmission
-    });
+export default function SearchFilters({ filters, onFilterChange, locations }) {
+  const handleCategoryChange = (e) => {
+    const { value } = e.target;
+    onFilterChange({ category: value === '' ? undefined : value });
   };
-
-  const handlePriceChange = (e) => {
-    setPriceRange([0, parseInt(e.target.value)]);
+  
+  const handleLocationChange = (e) => {
+    const { value } = e.target;
+    onFilterChange({ location_id: value === '' ? undefined : value });
   };
-
-  const toggleFilters = () => {
-    setIsFiltersOpen(!isFiltersOpen);
+  
+  const handleAvailabilityChange = (e) => {
+    const { checked } = e.target;
+    onFilterChange({ available: checked });
+  };
+  
+  const handlePriceMinChange = (e) => {
+    const value = e.target.value ? parseFloat(e.target.value) : undefined;
+    onFilterChange({ priceMin: value });
+  };
+  
+  const handlePriceMaxChange = (e) => {
+    const value = e.target.value ? parseFloat(e.target.value) : undefined;
+    onFilterChange({ priceMax: value });
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4">
-      <form onSubmit={handleSubmit}>
-        {/* Basic Search */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          {/* Location */}
-          <div className="relative">
-            <div className="flex items-center border rounded-md p-2">
-              <MapPin size={20} className="text-gray-500 mr-2" />
-              <input
-                type="text"
-                placeholder="Location"
-                className="w-full focus:outline-none"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          {/* Date Range */}
-          <div className="relative">
-            <div className="flex items-center border rounded-md p-2">
-              <Calendar size={20} className="text-gray-500 mr-2" />
-              <input
-                type="date"
-                className="w-full focus:outline-none mr-2"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-              <span className="text-gray-400">to</span>
-              <input
-                type="date"
-                className="w-full focus:outline-none ml-2"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          {/* Filter Toggle and Search Button */}
-          <div className="flex space-x-2">
-            <button
-              type="button"
-              onClick={toggleFilters}
-              className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              <Filter size={20} className="mr-2" />
-              Filters
-            </button>
-            
-            <button
-              type="submit"
-              className="flex-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center"
-            >
-              Search
-            </button>
+    <div className="bg-gray-100 p-4 rounded-lg">
+      <h2 className="text-xl font-semibold mb-4">Filter Cars</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Category Filter */}
+        <div>
+          <label className="block text-gray-700 text-sm font-medium mb-2">
+            Category
+          </label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={filters.category || ''}
+            onChange={handleCategoryChange}
+          >
+            <option value="">All Categories</option>
+            {CATEGORIES.map(category => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
+        
+        {/* Location Filter */}
+        <div>
+          <label className="block text-gray-700 text-sm font-medium mb-2">
+            Location
+          </label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={filters.location_id || ''}
+            onChange={handleLocationChange}
+          >
+            <option value="">All Locations</option>
+            {locations?.map(location => (
+              <option key={location.id} value={location.id}>
+                {location.city}, {location.state}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        {/* Price Range */}
+        <div>
+          <label className="block text-gray-700 text-sm font-medium mb-2">
+            Price Range ($ per day)
+          </label>
+          <div className="flex items-center space-x-2">
+            <input
+              type="number"
+              placeholder="Min"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={filters.priceMin || ''}
+              onChange={handlePriceMinChange}
+              min="0"
+            />
+            <span>to</span>
+            <input
+              type="number"
+              placeholder="Max"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={filters.priceMax || ''}
+              onChange={handlePriceMaxChange}
+              min="0"
+            />
           </div>
         </div>
         
-        {/* Advanced Filters */}
-        {isFiltersOpen && (
-          <div className="border-t pt-4 mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Price Range */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Max Price: ${priceRange[1]}/day
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="1000"
-                step="10"
-                value={priceRange[1]}
-                onChange={handlePriceChange}
-                className="w-full"
-              />
-            </div>
-            
-            {/* Vehicle Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Vehicle Type
-              </label>
-              <select
-                value={vehicleType}
-                onChange={(e) => setVehicleType(e.target.value)}
-                className="w-full p-2 border rounded-md"
-              >
-                <option value="all">All Types</option>
-                <option value="sedan">Sedan</option>
-                <option value="suv">SUV</option>
-                <option value="luxury">Luxury</option>
-                <option value="van">Van</option>
-                <option value="convertible">Convertible</option>
-              </select>
-            </div>
-            
-            {/* Transmission */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Transmission
-              </label>
-              <select
-                value={transmission}
-                onChange={(e) => setTransmission(e.target.value)}
-                className="w-full p-2 border rounded-md"
-              >
-                <option value="all">Any</option>
-                <option value="automatic">Automatic</option>
-                <option value="manual">Manual</option>
-              </select>
-            </div>
-          </div>
-        )}
-      </form>
+        {/* Availability Toggle */}
+        <div className="flex items-end">
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="form-checkbox h-5 w-5 text-blue-600"
+              checked={filters.available === true}
+              onChange={handleAvailabilityChange}
+            />
+            <span className="ml-2 text-gray-700">Show only available cars</span>
+          </label>
+        </div>
+      </div>
     </div>
   );
-};
-
-export default SearchFilters;
+}

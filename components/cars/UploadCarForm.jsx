@@ -1,452 +1,322 @@
-import { useState } from 'react';
+// components/cars/UploadCarForm.jsx
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
-import { Upload, MapPin, DollarSign, Users, Gauge, Calendar, Check, X } from 'lucide-react';
+import { useLocations } from '../../hooks/useLocations';
+import { createCar } from '../../lib/api/supabase-api';
 
-const UploadCarForm = () => {
+const CATEGORIES = [
+  'Economy', 'Compact', 'Midsize', 'SUV', 'Luxury', 'Van', 'Convertible'
+];
+
+export default function UploadCarForm() {
   const router = useRouter();
-  const { userId, getToken } = useAuth();
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [imagePreview, setImagePreview] = useState(null);
-  
+  const { locations, loading: loadingLocations } = useLocations();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
-    type: 'sedan',
-    price: '',
-    location: '',
-    passengers: '',
-    doors: '',
-    transmission: 'automatic',
-    mileage: '',
+    make: '',
+    model: '',
     year: new Date().getFullYear(),
-    fuelType: 'gasoline',
-    features: [],
-    image: null
+    price_per_day: '',
+    image_url: '',
+    available: true,
+    location_id: '',
+    description: '',
+    category: '',
+    features: {}
   });
 
-  const carFeatures = [
-    'Air Conditioning', 'Bluetooth', 'Cruise Control', 'Navigation System',
-    'Backup Camera', 'Leather Seats', 'Sunroof', 'USB Port'
-  ];
+  const [featureInputs, setFeatureInputs] = useState([
+    { key: '', value: '' }
+  ]);
 
   const handleChange = (e) => {
-    const { name, value, type, checked, files } = e.target;
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  const handleFeatureChange = (index, field, value) => {
+    const newFeatureInputs = [...featureInputs];
+    newFeatureInputs[index][field] = value;
+    setFeatureInputs(newFeatureInputs);
     
-    if (type === 'checkbox') {
-      if (checked) {
-        setFormData({
-          ...formData,
-          features: [...formData.features, value]
-        });
-      } else {
-        setFormData({
-          ...formData,
-          features: formData.features.filter(feature => feature !== value)
-        });
+    // Update the features object in formData
+    const features = {};
+    featureInputs.forEach(input => {
+      if (input.key && (input.value || input.value === false)) {
+        features[input.key] = input.value;
       }
-    } else if (type === 'file') {
-      if (files && files[0]) {
-        setFormData({
-          ...formData,
-          image: files[0]
-        });
-        
-        // Create image preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setImagePreview(e.target.result);
-        };
-        reader.readAsDataURL(files[0]);
-      }
-    } else {
-      setFormData({
-        ...formData,
-        [name]: value
-      });
+    });
+    setFormData({ ...formData, features });
+  };
+
+  const addFeatureField = () => {
+    setFeatureInputs([...featureInputs, { key: '', value: '' }]);
+  };
+
+  const removeFeatureField = (index) => {
+    if (featureInputs.length > 1) {
+      const newFeatureInputs = [...featureInputs];
+      newFeatureInputs.splice(index, 1);
+      setFeatureInputs(newFeatureInputs);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
+    
+    // Build the features object
+    const features = {};
+    featureInputs.forEach(input => {
+      if (input.key) {
+        features[input.key] = input.value;
+      }
+    });
     
     try {
-      if (!userId) {
-        throw new Error('You must be signed in to upload a car');
-      }
+      setLoading(true);
+      setError(null);
       
-      // First upload the image if exists
-      let imageUrl = '';
-      if (formData.image) {
-        const imageFormData = new FormData();
-        imageFormData.append('file', formData.image);
-        
-        const token = await getToken();
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`
-          },
-          body: imageFormData
-        });
-        
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload image');
-        }
-        
-        const uploadData = await uploadResponse.json();
-        imageUrl = uploadData.url;
-      }
-      
-      // Then create the car listing
+      // Prepare the final car data
       const carData = {
         ...formData,
-        image: imageUrl,
-        ownerId: userId
+        features,
+        year: parseInt(formData.year),
+        price_per_day: parseFloat(formData.price_per_day)
       };
       
-      delete carData.file; // Remove the actual file object
+      // Send to Supabase
+      await createCar(carData);
       
-      const token = await getToken();
-      const response = await fetch('/api/cars', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(carData)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to create car listing');
-      }
-      
-      // Success
-      setSuccess(true);
-      
-      // Redirect after success
-      setTimeout(() => {
-        router.push('/dashboard/my-cars');
-      }, 2000);
-      
+      // Redirect to cars page
+      router.push('/cars');
     } catch (err) {
-      console.error('Error uploading car:', err);
-      setError(err.message || 'An error occurred while uploading your car.');
+      setError(err.message);
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-semibold mb-6 text-center">List Your Car for Rent</h2>
-      
-      {success && (
-        <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded flex items-center">
-          <Check size={20} className="mr-2" />
-          <span>Your car has been successfully listed! Redirecting to your cars...</span>
-        </div>
-      )}
-      
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded flex items-center">
-          <X size={20} className="mr-2" />
-          <span>{error}</span>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
         </div>
       )}
       
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Car Image Upload */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-          {imagePreview ? (
-            <div className="relative w-full h-48">
-              <img 
-                src={imagePreview} 
-                alt="Car Preview" 
-                className="h-full mx-auto object-contain"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setImagePreview(null);
-                  setFormData({...formData, image: null});
-                }}
-                className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 shadow-md"
-              >
-                <X size={20} />
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Upload size={36} className="mx-auto text-gray-400" />
-              <p className="text-gray-500">Drag and drop an image or click to browse</p>
-              <input
-                type="file"
-                name="image"
-                accept="image/*"
-                onChange={handleChange}
-                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-              />
-            </div>
-          )}
-        </div>
-        
-        {/* Basic Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Car Name
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g., Toyota Camry 2023"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
-              Vehicle Type
-            </label>
-            <select
-              id="type"
-              name="type"
-              value={formData.type}
-              onChange={handleChange}
-              required
-              className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="sedan">Sedan</option>
-              <option value="suv">SUV</option>
-              <option value="luxury">Luxury</option>
-              <option value="van">Van</option>
-              <option value="convertible">Convertible</option>
-              <option value="sports">Sports</option>
-              <option value="economy">Economy</option>
-            </select>
-          </div>
-        </div>
-        
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Basic Car Information */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-            Description
+          <label className="block text-gray-700 font-medium mb-2">
+            Car Name
           </label>
-          <textarea
-            id="description"
-            name="description"
-            rows="3"
-            value={formData.description}
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
             onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-            className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Describe your car, its condition, and any special features"
-          ></textarea>
+          />
         </div>
         
-        {/* Price and Location */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-              <DollarSign size={16} className="inline mr-1" />
-              Daily Rate (USD)
-            </label>
-            <input
-              type="number"
-              id="price"
-              name="price"
-              min="0"
-              value={formData.price}
-              onChange={handleChange}
-              required
-              className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g., 45"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-              <MapPin size={16} className="inline mr-1" />
-              Location
-            </label>
-            <input
-              type="text"
-              id="location"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              required
-              className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g., New York, NY"
-            />
-          </div>
-        </div>
-        
-        {/* Car Details */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <label htmlFor="passengers" className="block text-sm font-medium text-gray-700 mb-1">
-              <Users size={16} className="inline mr-1" />
-              Passengers
-            </label>
-            <input
-              type="number"
-              id="passengers"
-              name="passengers"
-              min="1"
-              max="10"
-              value={formData.passengers}
-              onChange={handleChange}
-              required
-              className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="doors" className="block text-sm font-medium text-gray-700 mb-1">
-              Doors
-            </label>
-            <input
-              type="number"
-              id="doors"
-              name="doors"
-              min="2"
-              max="6"
-              value={formData.doors}
-              onChange={handleChange}
-              required
-              className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="transmission" className="block text-sm font-medium text-gray-700 mb-1">
-              Transmission
-            </label>
-            <select
-              id="transmission"
-              name="transmission"
-              value={formData.transmission}
-              onChange={handleChange}
-              required
-              className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="automatic">Automatic</option>
-              <option value="manual">Manual</option>
-            </select>
-          </div>
-          
-          <div>
-            <label htmlFor="mileage" className="block text-sm font-medium text-gray-700 mb-1">
-              <Gauge size={16} className="inline mr-1" />
-              MPG
-            </label>
-            <input
-              type="number"
-              id="mileage"
-              name="mileage"
-              min="1"
-              value={formData.mileage}
-              onChange={handleChange}
-              required
-              className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-1">
-              <Calendar size={16} className="inline mr-1" />
-              Year
-            </label>
-            <input
-              type="number"
-              id="year"
-              name="year"
-              min="1990"
-              max={new Date().getFullYear()}
-              value={formData.year}
-              onChange={handleChange}
-              required
-              className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="fuelType" className="block text-sm font-medium text-gray-700 mb-1">
-              Fuel Type
-            </label>
-            <select
-              id="fuelType"
-              name="fuelType"
-              value={formData.fuelType}
-              onChange={handleChange}
-              required
-              className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="gasoline">Gasoline</option>
-              <option value="diesel">Diesel</option>
-              <option value="hybrid">Hybrid</option>
-              <option value="electric">Electric</option>
-            </select>
-          </div>
-        </div>
-        
-        {/* Features */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-gray-700 font-medium mb-2">
+            Make
+          </label>
+          <input
+            type="text"
+            name="make"
+            value={formData.make}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-gray-700 font-medium mb-2">
+            Model
+          </label>
+          <input
+            type="text"
+            name="model"
+            value={formData.model}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-gray-700 font-medium mb-2">
+            Year
+          </label>
+          <input
+            type="number"
+            name="year"
+            value={formData.year}
+            onChange={handleChange}
+            min="1900"
+            max={new Date().getFullYear() + 1}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-gray-700 font-medium mb-2">
+            Price Per Day ($)
+          </label>
+          <input
+            type="number"
+            name="price_per_day"
+            value={formData.price_per_day}
+            onChange={handleChange}
+            min="0"
+            step="0.01"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-gray-700 font-medium mb-2">
+            Category
+          </label>
+          <select
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          >
+            <option value="">Select a category</option>
+            {CATEGORIES.map(category => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div>
+          <label className="block text-gray-700 font-medium mb-2">
+            Image URL
+          </label>
+          <input
+            type="url"
+            name="image_url"
+            value={formData.image_url}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <p className="text-sm text-gray-500 mt-1">
+            Leave empty to use a placeholder image
+          </p>
+        </div>
+        
+        <div>
+          <label className="block text-gray-700 font-medium mb-2">
+            Location
+          </label>
+          <select
+            name="location_id"
+            value={formData.location_id}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+            disabled={loadingLocations}
+          >
+            <option value="">Select a location</option>
+            {locations?.map(location => (
+              <option key={location.id} value={location.id}>
+                {location.name} - {location.city}, {location.state}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      
+      <div>
+        <label className="block text-gray-700 font-medium mb-2">
+          Description
+        </label>
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          rows="4"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ></textarea>
+      </div>
+      
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-gray-700 font-medium">
             Features
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {carFeatures.map((feature) => (
-              <div key={feature} className="flex items-center">
-                <input
-                  type="checkbox"
-                  id={`feature-${feature}`}
-                  name="features"
-                  value={feature}
-                  checked={formData.features.includes(feature)}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor={`feature-${feature}`} className="ml-2 text-sm text-gray-700">
-                  {feature}
-                </label>
-              </div>
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={addFeatureField}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            + Add Feature
+          </button>
         </div>
         
-        {/* Submit Button */}
+        {featureInputs.map((feature, index) => (
+          <div key={index} className="flex space-x-2 mb-2">
+            <input
+              type="text"
+              placeholder="Feature name"
+              value={feature.key}
+              onChange={(e) => handleFeatureChange(index, 'key', e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="text"
+              placeholder="Value"
+              value={feature.value}
+              onChange={(e) => handleFeatureChange(index, 'value', e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="button"
+              onClick={() => removeFeatureField(index)}
+              className="text-red-500 hover:text-red-700"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+      
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          name="available"
+          checked={formData.available}
+          onChange={handleChange}
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+        />
+        <label className="ml-2 block text-gray-700">
+          Car is available for rental
+        </label>
+      </div>
+      
+      <div className="flex justify-end">
         <button
           type="submit"
-          disabled={isSubmitting}
-          className={`w-full p-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center ${
-            isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
-          }`}
+          disabled={loading}
+          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
-          {isSubmitting ? (
-            <>
-              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-3"></div>
-              Uploading...
-            </>
-          ) : (
-            'List Your Car'
-          )}
+          {loading ? 'Uploading...' : 'Upload Car'}
         </button>
-      </form>
-    </div>
+      </div>
+    </form>
   );
-};
-
-export default UploadCarForm;
+}
