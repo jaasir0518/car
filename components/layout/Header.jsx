@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth, useUser, UserButton, SignInButton, SignUpButton } from '@clerk/nextjs';
 
@@ -12,26 +12,25 @@ export default function Header() {
   const pathname = usePathname();
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
-  const router = useRouter();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  // Updated navigation items with Dashboard, About, and Locations
+  // Navigation items based on the app structure
   const navigation = [
     { name: 'Home', href: '/' },
-    { name: 'Search Cars', href: '/search' },
+    { name: 'Cars', href: '/cars' },
     { name: 'Locations', href: '/locations' },
-    { name: 'How It Works', href: '/how-it-works' },
+    { name: 'Contact', href: '/contact' },
     { name: 'About', href: '/about' },
   ];
 
-  // Updated user navigation to include Dashboard
+  // User navigation aligned with dashboard structure
   const userNavigation = [
     { name: 'Dashboard', href: '/dashboard' },
-    { name: 'My Rentals', href: '/rentals' },
-    { name: 'My Cars', href: '/my-cars' },
+    { name: 'My Cars', href: '/dashboard/my-cars' },
+    { name: 'Bookings', href: '/dashboard/bookings' },
   ];
 
   return (
@@ -67,9 +66,9 @@ export default function Header() {
                 <Link href="/upload" className="text-sm font-medium text-blue-600 hover:text-blue-800">
                   List Your Car
                 </Link>
-                <div className="relative group">
+                <div className="relative user-dropdown">
                   <UserButton afterSignOutUrl="/" />
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden group-hover:block">
+                  <div className="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 hidden">
                     {userNavigation.map((item) => (
                       <Link
                         key={item.name}
@@ -175,7 +174,7 @@ export default function Header() {
                   
                   <div className="mt-2 px-3 pt-2 border-t border-gray-200">
                     <div className="flex items-center">
-                      <span className="mr-2">Sign Out:</span>
+                      <span className="mr-2">Account:</span>
                       <UserButton afterSignOutUrl="/" />
                     </div>
                   </div>
@@ -197,6 +196,32 @@ export default function Header() {
           </div>
         )}
       </div>
+
+      {/* Add CSS for dropdown hover effect */}
+      <style jsx>{`
+        .user-dropdown:hover .dropdown-menu {
+          display: block;
+        }
+        
+        .dropdown-menu {
+          display: none;
+        }
+        
+        .user-dropdown {
+          cursor: pointer;
+          display: flex;
+        }
+        
+        /* Add a padding area above the dropdown menu to prevent it from disappearing */
+        .dropdown-menu::before {
+          content: '';
+          position: absolute;
+          top: -10px;
+          left: 0;
+          right: 0;
+          height: 10px;
+        }
+      `}</style>
     </header>
   );
 }

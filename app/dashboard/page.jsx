@@ -1,6 +1,5 @@
 "use client"
 
-
 import { useState, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
@@ -88,6 +87,13 @@ export default function Dashboard() {
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5);
 
+  // Function to open Clerk user profile
+  const openUserProfile = () => {
+    if (window.Clerk) {
+      window.Clerk.openUserProfile();
+    }
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       {/* Welcome header */}
@@ -133,6 +139,16 @@ export default function Dashboard() {
           >
             My Cars
           </button>
+          <button
+            onClick={() => setActiveTab('account')}
+            className={`pb-4 px-1 ${
+              activeTab === 'account'
+                ? 'border-b-2 border-blue-500 font-medium text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Account
+          </button>
         </nav>
       </div>
 
@@ -162,6 +178,9 @@ export default function Dashboard() {
               <Link href="/dashboard/bookings">
                 <Button variant="outline">View All Bookings</Button>
               </Link>
+              <Button variant="outline" onClick={openUserProfile}>
+                Manage Account
+              </Button>
             </div>
           </div>
 
@@ -368,6 +387,81 @@ export default function Dashboard() {
               </Link>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Account management tab */}
+      {activeTab === 'account' && (
+        <div>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold">Account Management</h2>
+            <p className="text-gray-600 mt-2">Update your personal information and account settings</p>
+          </div>
+
+          <div className="bg-white shadow rounded-lg p-6">
+            {/* User profile info */}
+            <div className="mb-6 flex items-center">
+              <div className="h-16 w-16 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                {user?.imageUrl ? (
+                  <img src={user.imageUrl} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center bg-blue-100 text-blue-800 text-xl font-semibold">
+                    {user?.firstName?.[0] || user?.username?.[0] || user?.emailAddresses?.[0]?.emailAddress?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                )}
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-medium">
+                  {user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}` || user?.username || 'User'}
+                </h3>
+                <p className="text-gray-500">{user?.emailAddresses?.[0]?.emailAddress || 'No email found'}</p>
+              </div>
+            </div>
+
+            {/* Account management options */}
+            <div className="space-y-4">
+              <div className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <button onClick={openUserProfile} className="w-full text-left">
+                  <h4 className="font-medium mb-1">Profile Settings</h4>
+                  <p className="text-sm text-gray-500">Update your personal information, email, and password</p>
+                </button>
+              </div>
+
+              <div className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <button onClick={openUserProfile} className="w-full text-left">
+                  <h4 className="font-medium mb-1">Security Settings</h4>
+                  <p className="text-sm text-gray-500">Manage password, two-factor authentication, and security options</p>
+                </button>
+              </div>
+
+              <div className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <button onClick={openUserProfile} className="w-full text-left">
+                  <h4 className="font-medium mb-1">Payment Methods</h4>
+                  <p className="text-sm text-gray-500">Add or update your payment methods</p>
+                </button>
+              </div>
+
+              <div className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <button onClick={openUserProfile} className="w-full text-left">
+                  <h4 className="font-medium mb-1">Notification Preferences</h4>
+                  <p className="text-sm text-gray-500">Manage your email and push notification settings</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Help section */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h4 className="font-medium mb-4">Need Help?</h4>
+              <div className="flex gap-4">
+                <Link href="/help">
+                  <Button variant="outline">Help Center</Button>
+                </Link>
+                <Link href="/contact">
+                  <Button variant="outline">Contact Support</Button>
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
