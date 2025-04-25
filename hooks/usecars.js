@@ -1,125 +1,70 @@
-import { useState, useEffect } from 'react';
-import { 
-  getAllCars, 
-  getCarById, 
-  createCar, 
-  updateCar, 
-  deleteCar, 
-  checkCarAvailability,
-  updateCarAvailability
-} from '../lib/api/supabase-api';
+// hooks/useCars.js
 
-export function useCars(initialFilters = {}) {
+import { useState, useEffect } from 'react';
+import { CarModel } from '@/lib/db/models/Car';
+
+export const useCars = (initialFilters = {}) => {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    count: 0
+  });
   const [filters, setFilters] = useState(initialFilters);
 
-  useEffect(() => {
-    async function fetchCars() {
-      try {
-        setLoading(true);
-        const data = await getAllCars(filters);
-        setCars(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
+  // Load cars with current filters and pagination
+  const loadCars = async (page = 1) => {
+    setLoading(true);
+    setError(null);
     
-    fetchCars();
-  }, [filters]);
-
+    try {
+      const { cars: carData, error: carError, count, totalPages, currentPage } = 
+        await CarModel.getCars({ page, limit: 12, filters });
+      
+      if (carError) {
+        setError(carError);
+      } else {
+        setCars(carData);
+        setPagination({ currentPage, totalPages, count });
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to load cars');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Load cars when filters change
+  useEffect(() => {
+    loadCars(1); // Reset to first page when filters change
+  }, [JSON.stringify(filters)]); // Deep compare filters
+  
+  // Update filters
   const updateFilters = (newFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
-
-  const getCar = async (id) => {
-    try {
-      setLoading(true);
-      return await getCarById(id);
-    } catch (err) {
-      setError(err.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+  
+  // Reset filters to initial state
+  const resetFilters = () => {
+    setFilters(initialFilters);
   };
-
-  const addCar = async (carData) => {
-    try {
-      setLoading(true);
-      const newCar = await createCar(carData);
-      setCars(prev => [...prev, newCar[0]]);
-      return newCar[0];
-    } catch (err) {
-      setError(err.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+  
+  // Change page
+  const changePage = (page) => {
+    loadCars(page);
   };
-
-  const editCar = async (id, carData) => {
-    try {
-      setLoading(true);
-      const updated = await updateCar(id, carData);
-      setCars(prev => prev.map(car => car.id === id ? updated[0] : car));
-      return updated[0];
-    } catch (err) {
-      setError(err.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const removeCar = async (id) => {
-    try {
-      setLoading(true);
-      await deleteCar(id);
-      setCars(prev => prev.filter(car => car.id !== id));
-      return true;
-    } catch (err) {
-      setError(err.message);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkAvailability = async (id) => {
-    try {
-      return await checkCarAvailability(id);
-    } catch (err) {
-      setError(err.message);
-      return false;
-    }
-  };
-
-  const setAvailability = async (id, isAvailable) => {
-    try {
-      const updated = await updateCarAvailability(id, isAvailable);
-      setCars(prev => prev.map(car => car.id === id ? { ...car, available: isAvailable } : car));
-      return updated[0];
-    } catch (err) {
-      setError(err.message);
-      return null;
-    }
-  };
-
+  
   return {
     cars,
     loading,
     error,
+    pagination,
     filters,
     updateFilters,
-    getCar,
-    addCar,
-    editCar,
-    removeCar,
-    checkAvailability,
-    setAvailability
+    resetFilters,
+    changePage,
+    refreshCars: loadCars
   };
-}
+};

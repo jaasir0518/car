@@ -1,123 +1,100 @@
+// app/cars/page.js
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import CarCard from '@/components/cars/CarCard';
-import SearchFilters from '@/components/cars/SearchFilters';
-import { Car } from 'lucide-react';
+import { useCars } from '../../hooks/useCars';
+import CarGallery from '../../components/cars/CarGallery';
+import SearchFilters from '../../components/cars/SearchFilters';
+import Loader from '../../components/ui/Loader';
 
-// Mock data for demonstration - replace with your actual data source
-const MOCK_CARS = [
-  {
-    id: 1,
-    name: 'Tesla Model 3',
-    price: 75,
-    location: 'San Francisco',
-    year: 2023,
-    rating: 4.8,
-    reviewCount: 124,
-    category: 'Electric'
-  },
-  {
-    id: 2,
-    name: 'Toyota Camry',
-    price: 45,
-    location: 'Los Angeles',
-    year: 2022,
-    rating: 4.5,
-    reviewCount: 89,
-    category: 'Sedan'
-  }
-];
-
-const CarsPage = () => {
-  const router = useRouter();
-  const [title, setTitle] = useState("Available Cars");
-  const [description, setDescription] = useState("Browse our selection of high-quality rental cars.");
-  const [filters, setFilters] = useState({});
-  const [cars, setCars] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  // Simulate fetching cars - replace with your actual implementation
-  useEffect(() => {
-    const loadCars = () => {
-      setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setCars(MOCK_CARS);
-        setLoading(false);
-      }, 500);
-    };
-
-    loadCars();
-  }, []);
-
-  const handleAddCar = () => {
-    router.push('/upload');
+export default function CarsPage() {
+  const initialFilters = {
+    make: '',
+    model: '',
+    minPrice: '',
+    maxPrice: '',
+    location: '',
+    transmission: '',
+    fuel_type: ''
   };
+  
+  const {
+    cars,
+    loading,
+    error,
+    pagination,
+    filters,
+    updateFilters,
+    resetFilters,
+    changePage
+  } = useCars(initialFilters);
 
-  const handleFilterChange = (newFilters) => {
-    setFilters(newFilters);
-    
-    if (newFilters.location) {
-      setTitle(`Cars in ${newFilters.location}`);
-    } else {
-      setTitle("Available Cars");
-    }
-  };
-
-  // Filter cars based on current filters
-  const filteredCars = cars.filter(car => {
-    // Implement your filtering logic here
-    if (filters.location && car.location !== filters.location) {
-      return false;
-    }
-    return true;
-  });
-
-  return (
-    <div className="min-h-screen">
-      <div className="bg-blue-600 text-white py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{title}</h1>
-              <p className="text-blue-100">{description}</p>
-            </div>
-            <button
-              onClick={handleAddCar}
-              className="mt-4 md:mt-0 flex items-center bg-white text-blue-600 px-4 py-2 rounded-md hover:bg-blue-50 transition-colors"
-            >
-              <Car size={20} className="mr-2" />
-              List Your Car
-            </button>
-          </div>
+  if (error) {
+    return (
+      <div className="container mx-auto py-10 px-4">
+        <div className="bg-red-100 p-4 rounded-md text-red-700">
+          Error loading cars: {error}
         </div>
       </div>
+    );
+  }
 
-      <div className="container mx-auto px-4 py-8">
-        <SearchFilters onFilterChange={handleFilterChange} />
+  return (
+    <div className="container mx-auto py-10 px-4">
+      <h1 className="text-3xl font-bold mb-8">Available Cars</h1>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-1">
+          <SearchFilters 
+            filters={filters}
+            updateFilters={updateFilters}
+            resetFilters={resetFilters}
+          />
+        </div>
         
-        {/* Replace CarGallery with direct rendering of CarCard components */}
-        <div className="mt-6">
+        <div className="lg:col-span-3">
           {loading ? (
-            <div className="text-center py-10">Loading cars...</div>
+            <div className="flex justify-center items-center h-64">
+              <Loader size="lg" />
+            </div>
+          ) : cars.length === 0 ? (
+            <div className="bg-gray-100 p-8 rounded-md text-center">
+              <h3 className="text-xl font-medium text-gray-700">No cars found</h3>
+              <p className="text-gray-500 mt-2">Try adjusting your filters or check back later.</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredCars.map(car => (
-                <CarCard key={car.id} car={car} />
-              ))}
-              {filteredCars.length === 0 && (
-                <div className="col-span-full text-center py-10 text-gray-500">
-                  No cars found matching your criteria.
+            <>
+              <p className="mb-4 text-gray-600">
+                Found {pagination.count} cars matching your criteria
+              </p>
+              
+              <CarGallery cars={cars} />
+              
+              {/* Pagination UI */}
+              {pagination.totalPages > 1 && (
+                <div className="mt-8 flex justify-center">
+                  <div className="flex space-x-2">
+                    {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => changePage(page)}
+                        className={`px-4 py-2 rounded ${
+                          pagination.currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 hover:bg-gray-300'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </div>
     </div>
   );
-};
-
-export default CarsPage;
+}

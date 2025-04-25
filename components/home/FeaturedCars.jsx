@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import CarCard from '../cars/CarCard';
-import { getAllCars } from '../../lib/api/supabase-api';
+import { getAllCars } from '@/api/supabase';
 
 export default function FeaturedCars() {
   const [featuredCars, setFeaturedCars] = useState([]);

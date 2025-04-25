@@ -1,6 +1,6 @@
 // app/layout.js
 import { ClerkProvider } from '@clerk/nextjs';
-import { AuthProvider } from '@/context/AuthContext';
+import  AuthProvider  from ../context/AuthContext';
 import { Inter } from 'next/font/google';
 import Footer from '@/components/layout/Footer';
 import './globals.css';
