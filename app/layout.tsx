@@ -1,34 +1,32 @@
-// app/layout.js
+// app/layout.tsx
 import { ClerkProvider } from '@clerk/nextjs';
-import  AuthProvider  from ../context/AuthContext';
+import { AuthProvider } from '@/context/AuthContext';
 import { Inter } from 'next/font/google';
 import Footer from '@/components/layout/Footer';
 import './globals.css';
-import { ReactNode } from 'react';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'Car Rental Service',
-  description: 'Find and rent your ideal car',
+  description: 'Rent a car for your next adventure',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <body className={inter.className}>
+    <html lang="en">
+      <body className={inter.className}>
+        <ClerkProvider>
           <AuthProvider>
-            <div className="min-h-screen flex flex-col">
-              {/* Header removed from here */}
-              <main className="flex-grow">
-                {children}
-              </main>
-              <Footer />
-            </div>
+            {children}
+            <Footer />
           </AuthProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }
